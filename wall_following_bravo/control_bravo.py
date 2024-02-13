@@ -18,23 +18,38 @@ class Control_bravo(Node):
         self.prev_error = 0
         self.steering_angle = 0
         self.prev_T=0
-        self.deltaT=0
+        self.deltaT=1
 
 
         # subscriptor
+        self.error_sub= self.create_subscription(
+            Clock,
+            'clock',
+            self.time_calculation,
+            10)
+        
         self.error_sub= self.create_subscription(
             Float32,
             'error_msg',
             self.function_callback,
             10)
+        
+    def time_calculation(self,msg):
+        T=msg.clock
+        T_nanosec=T.nanosec
+        T_total=T_nanosec*10**(-9)
+        self.deltaT=T_total-self.prev_T
+        self.prev_T=T_total
+        return self.deltaT
 
     def function_callback(self,msg):
-        self.get_logger().info('drrozo')
-        kp = 3 
-        kd = 0.1  
-        max_steering = 0.5  
-        min_steering = -0.5  
-        forward_velocity = 0.2
+        time=self.deltaT
+        self.get_logger().info('drozo')
+        kp = 8 
+        kd = 18  
+        max_steering = 3.0
+        min_steering = -3.0 
+        forward_velocity = 1.1
 
         # PD control
         error = msg.data
@@ -43,7 +58,7 @@ class Control_bravo(Node):
 
         self.prev_error = error
 
-        steering_correction = -(kp * error + kd * delta_error)
+        steering_correction = -(kp * error + kd * delta_error/time)
         self.steering_angle = self.steering_angle - steering_correction
 
         # Check for saturation on steering

@@ -23,18 +23,21 @@ class dist_finder_bravo(Node):
             10)
         self.get_logger().info('HELLOOOOO')
     def getRange(self,data):
-        a=data[125]
+        a=data[145]
         b=data[85]
         a=np.array(a)
         b=np.array(b)
 
 
-        theta=40
-        Desired_distance = 0.8
+        theta=np.deg2rad(60)
+        Desired_distance = 1.1
         alfa=arctan2((a*cos(theta)-b),a*sin(theta))
         AB=b*cos(alfa)
+
+        AC=2.5
+        CD=AB+sin(alfa)*AC
         
-        error=Desired_distance-AB
+        error=Desired_distance-CD
         
         return error
 
