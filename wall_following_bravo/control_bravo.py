@@ -43,13 +43,14 @@ class Control_bravo(Node):
         return self.deltaT
 
     def function_callback(self,msg):
+
         time=self.deltaT
         self.get_logger().info('drozo')
-        kp = 8 
-        kd = 18  
+        kp = 0.8 
+        kd = 3.212  
         max_steering = 3.0
         min_steering = -3.0 
-        forward_velocity = 1.1
+        forward_velocity = 1.5
 
         # PD control
         error = msg.data

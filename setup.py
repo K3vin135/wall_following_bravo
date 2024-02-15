@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+from glob import glob
+import os
 
 package_name = 'wall_following_bravo'
 
@@ -10,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -22,6 +25,7 @@ setup(
         'console_scripts': [
             'dist_finder_bravo = wall_following_bravo.dist_finder_bravo:main',
             'control_bravo = wall_following_bravo.control_bravo:main',
+            'gap_finder_bravo = wall_following_bravo.Gap_Node:main',
         ],
     },
 )
