@@ -50,7 +50,7 @@ class Control_bravo(Node):
         kd = 3.212  
         max_steering = 3.0
         min_steering = -3.0 
-        forward_velocity = 1.5
+        forward_velocity = 1.1
 
         # PD control
         error = msg.data

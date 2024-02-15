@@ -9,7 +9,9 @@ from numpy import cos, sin, pi,tan,arctan,arctan2
 import matplotlib.pyplot as plt
 import sys
 import csv
-import time 
+import time as timexxx
+from rosgraph_msgs.msg import Clock
+
 
 class Gap_Node(Node):
     def __init__(self):
@@ -17,33 +19,60 @@ class Gap_Node(Node):
         self.pos_subs = self.create_subscription(LaserScan,'scan',self.gap_callback,10)
         self.vel_pub = self.create_publisher(Twist,'cmd_route',10)
         self.steering_angle = 0
+        self.prev_T=0
+        self.deltaT=1
+
+        # subscriptor
+        self.error_sub= self.create_subscription(
+        Clock,
+        'clock',
+        self.time_calculation,
+        10)
 
     def posicion_maxima_secuencia(self,arr):
         # Convertir la lista a un arreglo NumPy
         arr = np.array(arr)
 
-        # Encontrar subarreglos donde arr no es cero
+        # Dividir el arreglo en subarreglos cada que encuentre un 0
         non_zero_subarrays = np.split(arr, np.where(arr == 0)[0])
+        # Encontrar subarreglos donde arr no es cero
         subarreglo_sin_ceros = [non_zero_subarrays[non_zero_subarrays != 0] for non_zero_subarrays in non_zero_subarrays]
 
         # Filtrar subarreglos no vacíos
         subarreglo_sin_ceros = [subarray for subarray in subarreglo_sin_ceros if len(subarray) > 0]
-        search = max(subarreglo_sin_ceros,key=len) # Busca el GAP más grande
-        posicion = arr.tolist().index(search[0]) # indica la posición del GAP más grande
-        posicionF = posicion + len(search) - 1
 
-        return posicion, posicionF, search
+        #Hayar el subarregklo con el promedio más grande
+        promedios = np.array([np.mean(arreglo) for arreglo in subarreglo_sin_ceros])
+        max_promedio_index = np.argmax(promedios)
+
+        posicion = np.where(arr == subarreglo_sin_ceros[max_promedio_index][0])[0][0] # Buscamos donde esta el arreglo con mayor promedio 
+        posicionF = posicion + len(subarreglo_sin_ceros[max_promedio_index]) - 1
+
+
+        #search = max(subarreglo_sin_ceros,key=len) # Busca el GAP más grande
+        return posicion, posicionF, subarreglo_sin_ceros[max_promedio_index]
+    
+    def time_calculation(self,msg):
+        T=msg.clock
+        T_nanosec=T.nanosec
+        T_total=T_nanosec*10**(-9)
+        self.deltaT=T_total-self.prev_T
+        self.prev_T=T_total
+        return self.deltaT
 
 
     def gap_callback(self, msg):
-        kp = 8 
-        #kd = 18  
-        max_steering = 0.5
-        min_steering = -0.5 
-        forward_velocity = 0.3
+        time=self.deltaT
+        kp = 2 
+        kd = 18  
+        max_steering = 3.0
+        min_steering = -3.0 
+        forward_velocity = 0.5
 
-        array = msg.ranges
+        array = msg.ranges[89:269]
 
+        array=np.where(array==np.inf, 20, array)
+                       
         min = np.min(array)
 
         #Replace min values to 0
@@ -63,12 +92,12 @@ class Gap_Node(Node):
         piece = (len(max_array)-1)//2
 
         set_point = array.tolist().index(max_array[piece])
-        print(set_point)
+        
 
-        error = set_point - 179 
+        error = set_point - 89 
 
-
-        steering_correction = -(kp * error )
+        print(error)
+        steering_correction = -(kp * error + kd * error/time)
         self.steering_angle = self.steering_angle - steering_correction
 
                 # Check for saturation on steering
@@ -83,7 +112,7 @@ class Gap_Node(Node):
         cmd_vel_gap.linear.x = forward_velocity
         cmd_vel_gap.angular.z = self.steering_angle
         self.vel_pub.publish(cmd_vel_gap)
-
+        
 
         
         

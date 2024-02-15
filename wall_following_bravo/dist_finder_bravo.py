@@ -23,46 +23,46 @@ class dist_finder_bravo(Node):
             10)
         self.get_logger().info('HELLOOOOO')
     def getRange(self,data):
-        
-        self.get_logger().info('DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD')
-        a=data[149]
-        b=data[89]
-        self.get_logger().info(str(data[180]))
-        a=np.array(a)
-        b=np.array(b)
+        if (data[89]+data[149])/2<(data[89+180]+data[89+180-60])/2:
+            self.get_logger().info('DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD')
+            a=data[149]
+            b=data[89]
+            self.get_logger().info(str(data[180]))
+            a=np.array(a)
+            b=np.array(b)
 
 
-        theta=np.deg2rad(60)
-        Desired_distance = 1.2
-        alfa=arctan2((a*cos(theta)-b),a*sin(theta))
-        AB=b*cos(alfa)
+            theta=np.deg2rad(60)
+            Desired_distance = 0.7
+            alfa=arctan2((a*cos(theta)-b),a*sin(theta))
+            AB=b*cos(alfa)
 
-        AC=1.5
-        CD=AB+sin(alfa)*AC
-        
-        error=Desired_distance-CD
-        
-        return error
-        # else:
-        #     self.get_logger().info('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII')
-        #     a=data[209]
-        #     b=data[269]
-        #     self.get_logger().info(str(data[180]))
-        #     a=np.array(a)
-        #     b=np.array(b)
-
-
-        #     theta=np.deg2rad(60)
-        #     Desired_distance = 1.2
-        #     alfa=arctan2((a*cos(theta)-b),a*sin(theta))
-        #     AB=b*cos(alfa)
-
-        #     AC=1.5
-        #     CD=AB+sin(alfa)*AC
+            AC=1.3
+            CD=AB+sin(alfa)*AC
             
-        #     error=Desired_distance-CD
+            error=Desired_distance-CD
             
-        #     return -error
+            return error
+        else:
+            self.get_logger().info('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII')
+            a=data[89+180-60]
+            b=data[89+180]
+            self.get_logger().info(str(data[180]))
+            a=np.array(a)
+            b=np.array(b)
+
+
+            theta=np.deg2rad(60)
+            Desired_distance = 0.9
+            alfa=arctan2((a*cos(theta)-b),a*sin(theta))
+            AB=b*cos(alfa)
+
+            AC=1.3
+            CD=AB+sin(alfa)*AC
+            
+            error=Desired_distance-CD
+            
+            return -error
 
     def function_callback(self,msg):
         data=msg.ranges
