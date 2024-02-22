@@ -63,15 +63,35 @@ class Gap_Node(Node):
 
     def gap_callback(self, msg):
         time=self.deltaT
-        kp = 2 
-        kd = 18  
+        kp = 3 
+        kd = 10.0  
         max_steering = 3.0
         min_steering = -3.0 
-        forward_velocity = 0.5
+        forward_velocity = 1.0
 
-        array = msg.ranges[89:269]
+        array = msg.ranges[(89+10):(269-10)]
+        array=np.array(array)
+        array[:30] *= 0.4  
+        array[130:160] *= 0.4
 
         array=np.where(array==np.inf, 20, array)
+
+        if array[159]>=10 or array[158]>=10 or array[157]>=10 or array[156]>=10 or array[155]>=10 or array[154]>=10 or array[153]>=10 or array[152]>=10 or array[151]>=10 or array[150]>=10:
+            array[159]=3
+            array[158]=3
+            array[157]=3
+            array[156]=3
+            array[155]=3
+            array[154]=3
+            array[153]=3
+            array[152]=3
+            array[151]=3
+            array[150]=3
+            array[149]=3
+            array[148]=3
+            array[147]=3
+            array[146]=3
+
                        
         min = np.min(array)
 
@@ -94,9 +114,9 @@ class Gap_Node(Node):
         set_point = array.tolist().index(max_array[piece])
         
 
-        error = set_point - 89 
+        error = set_point - (89-10) 
 
-        print(error)
+        print(array[0])
         steering_correction = -(kp * error + kd * error/time)
         self.steering_angle = self.steering_angle - steering_correction
 
