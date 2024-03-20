@@ -8,6 +8,9 @@ import time
 import numpy as np
 from numpy import cos, sin, pi,tan,arctan,arctan2
 
+pared=90*2
+angulo=30*2
+
 
 class dist_finder_bravo(Node):
 
@@ -18,54 +21,55 @@ class dist_finder_bravo(Node):
         # subscriptor
         self.scan_sub= self.create_subscription(
             LaserScan,
-            'scan',
+            '/scan',
             self.function_callback,
             10)
         self.get_logger().info('HELLOOOOO')
+
+
     def getRange(self,data):
-        if (data[89]+data[149])/2<(data[89+180]+data[89+180-60])/2:
+
+        #if (data[pared]+data[pared-angulo])/2<(data[pared+360]+data[pared+360+angulo])/2:
             self.get_logger().info('DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD')
-            a=data[149]
-            b=data[89]
-            self.get_logger().info(str(data[180]))
-            a=np.array(a)
-            b=np.array(b)
+
+            a=data[pared-angulo]
+            b=data[pared] 
 
 
-            theta=np.deg2rad(60)
-            Desired_distance = 0.7
+            theta=np.deg2rad(angulo/2)
+            Desired_distance = 0.2
             alfa=arctan2((a*cos(theta)-b),a*sin(theta))
             AB=b*cos(alfa)
 
-            AC=1.3
-            CD=AB+sin(alfa)*AC
-            
-            error=Desired_distance-CD
-            
-            return error
-        else:
-            self.get_logger().info('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII')
-            a=data[89+180-60]
-            b=data[89+180]
-            self.get_logger().info(str(data[180]))
-            a=np.array(a)
-            b=np.array(b)
-
-
-            theta=np.deg2rad(60)
-            Desired_distance = 0.9
-            alfa=arctan2((a*cos(theta)-b),a*sin(theta))
-            AB=b*cos(alfa)
-
-            AC=1.3
+            AC=2
             CD=AB+sin(alfa)*AC
             
             error=Desired_distance-CD
             
             return -error
+        # else:
+        #     self.get_logger().info('IIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIIII')
+        #     a=data[pared+360+angulo]
+        #     b=data[pared+360]
+
+        #     theta=np.deg2rad(60)
+        #     Desired_distance = 0.5
+        #     alfa=arctan2((a*cos(theta)-b),a*sin(theta))
+        #     AB=b*cos(alfa)
+
+        #     AC=2
+        #     CD=AB+sin(alfa)*AC
+            
+        #     error=Desired_distance-CD
+            
+        #     return error
 
     def function_callback(self,msg):
+        self.get_logger().info('asdd')
         data=msg.ranges
+        data=np.array(data)
+        data=np.where(data==np.inf, 10.0, data)
+        print(data.size)
         error= self.getRange(data)
 
         new_error= float(error)

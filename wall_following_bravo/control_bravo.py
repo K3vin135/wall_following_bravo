@@ -1,14 +1,9 @@
 #!/usr/bin/env python3
 import rclpy
 from rclpy.node import Node
-
 from std_msgs.msg import Float32
 from geometry_msgs.msg import Twist
-from sensor_msgs.msg import LaserScan
-import time
-from numpy import cos, sin, pi,tan,arctan,arctan2
-
-from rosgraph_msgs.msg import Clock
+from rclpy.clock import ROSClock
 
 class Control_bravo(Node):
 
@@ -17,63 +12,59 @@ class Control_bravo(Node):
         self.cmd_pub = self.create_publisher(Twist, 'cmd_vel_ctrl', 10)
         self.prev_error = 0
         self.steering_angle = 0
-        self.prev_T=0
-        self.deltaT=1
+        self.prev_time = self.get_clock().now()
+        self.error = 0
 
-
-        # subscriptor
-        self.error_sub= self.create_subscription(
-            Clock,
-            'clock',
-            self.time_calculation,
-            10)
-        
-        self.error_sub= self.create_subscription(
+        # Suscriptor
+        self.error_sub = self.create_subscription(
             Float32,
             'error_msg',
-            self.function_callback,
+            self.error_callback,
             10)
-        
-    def time_calculation(self,msg):
-        T=msg.clock
-        T_nanosec=T.nanosec
-        T_total=T_nanosec*10**(-9)
-        self.deltaT=T_total-self.prev_T
-        self.prev_T=T_total
-        return self.deltaT
 
-    def function_callback(self,msg):
+        # Temporizador para el control PD
+        control_frequency = 10.0  # 10 Hz
+        self.timer = self.create_timer(1.0 / control_frequency, self.control_callback)
 
-        time=self.deltaT
-        self.get_logger().info('drozo')
-        kp = 0.8 
-        kd = 3.212  
-        max_steering = 3.0
-        min_steering = -3.0 
-        forward_velocity = 1.1
+    def error_callback(self, msg):
+        # Almacenar el error más reciente
+        self.error = msg.data
+
+    def control_callback(self):
+        current_time = self.get_clock().now()
+        delta_time = (current_time - self.prev_time).nanoseconds * 10**(-9)
+
+        if delta_time == 0:
+            return
 
         # PD control
-        error = msg.data
+        kp = 0.08
+        kd = 1
+        max_steering = 0.3
+        min_steering = -0.3
+        forward_velocity = 0.2
 
-        delta_error = error - self.prev_error
+        delta_error = self.error - self.prev_error
 
-        self.prev_error = error
-
-        steering_correction = -(kp * error + kd * delta_error/time)
+        steering_correction = -(kp * self.error + kd * delta_error / delta_time)
         self.steering_angle = self.steering_angle - steering_correction
 
         # Check for saturation on steering
         if self.steering_angle > max_steering:
             self.steering_angle = max_steering
-            
         elif self.steering_angle < min_steering:
             self.steering_angle = min_steering
-            
-        # Crear y publicar el mensaje de velocidad de comando
+
+        # Publicar el mensaje de velocidad de comando
         cmd_vel = Twist()
-        cmd_vel.linear.x = forward_velocity
+        #cmd_vel.linear.x = forward_velocity
+        cmd_vel.linear.x = 0.2
         cmd_vel.angular.z = self.steering_angle
         self.cmd_pub.publish(cmd_vel)
+
+        # Actualizar valores para la próxima iteración
+        self.prev_error = self.error
+        self.prev_time = current_time
 
 def main():
     rclpy.init()
@@ -82,13 +73,8 @@ def main():
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
-
     node.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
     main()
-
-        
-
-

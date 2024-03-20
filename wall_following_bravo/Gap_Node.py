@@ -8,30 +8,32 @@ import numpy as np
 from numpy import cos, sin, pi,tan,arctan,arctan2
 import matplotlib.pyplot as plt
 import sys
-import csv
+from rclpy.clock import ROSClock
 import time as timexxx
 from rosgraph_msgs.msg import Clock
+import time
 
 
 class Gap_Node(Node):
     def __init__(self):
         super().__init__('gap_node')
-        self.pos_subs = self.create_subscription(LaserScan,'scan',self.gap_callback,10)
-        self.vel_pub = self.create_publisher(Twist,'cmd_route',10)
+        self.pos_subs = self.create_subscription(LaserScan,'/scan',self.gap_callback,10)
+        self.cmd_pub = self.create_publisher(Twist,'cmd_route',10)
         self.steering_angle = 0
-        self.prev_T=0
-        self.deltaT=1
+        self.prev_error = 0
+        self.prev_time = self.get_clock().now()
+        self.error = 0
+        self.resolucion=2
 
-        # subscriptor
-        self.error_sub= self.create_subscription(
-        Clock,
-        'clock',
-        self.time_calculation,
-        10)
+        # Temporizador para el control PD
+        control_frequency = 10.0  # 10 Hz
+        self.timer = self.create_timer(1.0 / control_frequency, self.control_callback)
+
 
     def posicion_maxima_secuencia(self,arr):
         # Convertir la lista a un arreglo NumPy
         arr = np.array(arr)
+        
 
         # Dividir el arreglo en subarreglos cada que encuentre un 0
         non_zero_subarrays = np.split(arr, np.where(arr == 0)[0])
@@ -52,47 +54,28 @@ class Gap_Node(Node):
         #search = max(subarreglo_sin_ceros,key=len) # Busca el GAP más grande
         return posicion, posicionF, subarreglo_sin_ceros[max_promedio_index]
     
-    def time_calculation(self,msg):
-        T=msg.clock
-        T_nanosec=T.nanosec
-        T_total=T_nanosec*10**(-9)
-        self.deltaT=T_total-self.prev_T
-        self.prev_T=T_total
-        return self.deltaT
 
 
     def gap_callback(self, msg):
-        time=self.deltaT
-        kp = 3 
-        kd = 10.0  
-        max_steering = 3.0
-        min_steering = -3.0 
-        forward_velocity = 1.0
+        
 
-        array = msg.ranges[(89+10):(269-10)]
-        array=np.array(array)
-        array[:30] *= 0.4  
-        array[130:160] *= 0.4
+        array1=np.array(msg.ranges)
+        
+        arrayaux=array1[0:69*self.resolucion]
+        arrayaux=np.flip(arrayaux)
 
-        array=np.where(array==np.inf, 20, array)
+        arrayaux2=array1[289*self.resolucion:359*self.resolucion]
+        arrayaux2=np.flip(arrayaux2)
 
-        if array[159]>=10 or array[158]>=10 or array[157]>=10 or array[156]>=10 or array[155]>=10 or array[154]>=10 or array[153]>=10 or array[152]>=10 or array[151]>=10 or array[150]>=10:
-            array[159]=3
-            array[158]=3
-            array[157]=3
-            array[156]=3
-            array[155]=3
-            array[154]=3
-            array[153]=3
-            array[152]=3
-            array[151]=3
-            array[150]=3
-            array[149]=3
-            array[148]=3
-            array[147]=3
-            array[146]=3
 
-                       
+        array = np.concatenate([arrayaux,arrayaux2])
+        array = np.flip(array)
+        # array[:30] *= 0.7  
+        # array[130:160] *= 0.7
+
+        array=np.where(array==np.inf, 12, array)
+        print(array[0])
+        print(array[138])             
         min = np.min(array)
 
         #Replace min values to 0
@@ -101,41 +84,53 @@ class Gap_Node(Node):
         #Obtain max gap, distance to max gap and angle between lenght of the gap
         pos_max, pos_Fin, max_array = self.posicion_maxima_secuencia(new_array)
         
-        angle = pos_max - pos_Fin 
-
-        A = max_array[0]
-        B = max_array[-1]
-
-        C = np.sqrt(np.power(A,2)+np.power(B,2)-2*A*B*cos(np.deg2rad(angle)))
 
         # Following middle gap point
-        piece = (len(max_array)-1)//2
+        piece = (len(max_array))//2 - 1
 
-        set_point = array.tolist().index(max_array[piece])
-        
+        set_point = new_array.tolist().index(max_array[piece])
+        print(max_array)
 
-        error = set_point - (89-10) 
+        self.error = set_point - 70*self.resolucion
+        print("error: ", self.error)
+        print("set_point: ", set_point)
+        print("distancia: ", array[set_point])
+      
+    def control_callback(self):
+        current_time = self.get_clock().now()
+        delta_time = (current_time - self.prev_time).nanoseconds * 10**(-9)
 
-        print(array[0])
-        steering_correction = -(kp * error + kd * error/time)
+        if delta_time == 0:
+            return
+
+        # PD control
+        kp = 0.06
+        kd = 0.4
+        max_steering = 0.3
+        min_steering = -0.3
+        forward_velocity = 0.3
+
+        delta_error = self.error - self.prev_error
+
+        steering_correction = -(kp * self.error + kd * delta_error / delta_time)
         self.steering_angle = self.steering_angle - steering_correction
 
-                # Check for saturation on steering
+        # Check for saturation on steering
         if self.steering_angle > max_steering:
             self.steering_angle = max_steering
-            
         elif self.steering_angle < min_steering:
             self.steering_angle = min_steering
-            
-        # Crear y publicar el mensaje de velocidad de comando
-        cmd_vel_gap = Twist()
-        cmd_vel_gap.linear.x = forward_velocity
-        cmd_vel_gap.angular.z = self.steering_angle
-        self.vel_pub.publish(cmd_vel_gap)
-        
 
-        
-        
+        # Publicar el mensaje de velocidad de comando
+        cmd_vel = Twist()
+        cmd_vel.linear.x = forward_velocity
+        cmd_vel.angular.z = self.steering_angle
+        self.cmd_pub.publish(cmd_vel)
+
+        # Actualizar valores para la próxima iteración
+        self.prev_error = self.error
+        self.prev_time = current_time
+
 
 
 def main():
