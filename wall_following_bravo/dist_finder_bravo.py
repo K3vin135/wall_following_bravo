@@ -24,24 +24,21 @@ class dist_finder_bravo(Node):
             '/scan',
             self.function_callback,
             10)
-        self.get_logger().info('HELLOOOOO')
 
 
     def getRange(self,data):
 
         #if (data[pared]+data[pared-angulo])/2<(data[pared+360]+data[pared+360+angulo])/2:
-            self.get_logger().info('DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD')
 
             a=data[pared-angulo]
             b=data[pared] 
 
-
             theta=np.deg2rad(angulo/2)
-            Desired_distance = 0.2
+            Desired_distance = 0
             alfa=arctan2((a*cos(theta)-b),a*sin(theta))
             AB=b*cos(alfa)
 
-            AC=2
+            AC=0.3
             CD=AB+sin(alfa)*AC
             
             error=Desired_distance-CD
@@ -65,11 +62,9 @@ class dist_finder_bravo(Node):
         #     return error
 
     def function_callback(self,msg):
-        self.get_logger().info('asdd')
         data=msg.ranges
         data=np.array(data)
-        data=np.where(data==np.inf, 10.0, data)
-        print(data.size)
+        data=np.where(data==np.inf, 20.0, data)
         error= self.getRange(data)
 
         new_error= float(error)

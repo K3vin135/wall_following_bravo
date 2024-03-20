@@ -23,7 +23,7 @@ class Control_bravo(Node):
             10)
 
         # Temporizador para el control PD
-        control_frequency = 10.0  # 10 Hz
+        control_frequency = 50.0  # 10 Hz
         self.timer = self.create_timer(1.0 / control_frequency, self.control_callback)
 
     def error_callback(self, msg):
@@ -38,11 +38,11 @@ class Control_bravo(Node):
             return
 
         # PD control
-        kp = 0.08
-        kd = 1
+        kp = 0.001
+        kd = 5
         max_steering = 0.3
         min_steering = -0.3
-        forward_velocity = 0.2
+        forward_velocity = 0.19
 
         delta_error = self.error - self.prev_error
 
@@ -58,7 +58,7 @@ class Control_bravo(Node):
         # Publicar el mensaje de velocidad de comando
         cmd_vel = Twist()
         #cmd_vel.linear.x = forward_velocity
-        cmd_vel.linear.x = 0.2
+        cmd_vel.linear.x = 0.19
         cmd_vel.angular.z = self.steering_angle
         self.cmd_pub.publish(cmd_vel)
 
